@@ -66,7 +66,7 @@ pst_json_bool_field() {
   local field="$1" input
   input=$(cat)
   if command -v python3 &>/dev/null; then
-    echo "$input" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); print(str(d.get('$field','false')).lower())" 2>/dev/null
+    echo "$input" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); v=d.get('$field'); print('true' if v is True else 'false')" 2>/dev/null
   else
     echo "$input" | sed -n "s/.*\"${field}\"[[:space:]]*:[[:space:]]*\([a-z]*\).*/\1/p" | head -1
   fi
