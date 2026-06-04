@@ -75,7 +75,8 @@ pst_classify_line() {
 
   if [ -n "$TOOL_START_PATTERN" ] && echo "$line" | grep -qE "$TOOL_START_PATTERN"; then
     local tool
-    tool=$(echo "$line" | grep -oE "$TOOL_START_PATTERN" | head -1 | sed 's/^[●✓] //')
+    tool=$(echo "$line" | sed -n 's/^.*● \([A-Za-z]*\).*/\1/p' | head -1)
+    [ -z "$tool" ] && tool="unknown"
     eval "$seq_ref=\$((\$$seq_ref + 1))"
     json_event "$session" "$pane" "$source" "$(eval echo "\$$seq_ref")" "tool_call_started" \
       "{\"tool\":$(json_string "$tool"),\"input_preview\":$(json_string "${line:0:120}")}"
@@ -83,11 +84,17 @@ pst_classify_line() {
   fi
 
   if [ -n "$TOOL_END_PATTERN" ] && echo "$line" | grep -qE "$TOOL_END_PATTERN"; then
-    local tool
-    tool=$(echo "$line" | grep -oE "$TOOL_END_PATTERN" | head -1 | sed 's/^[●✓] //')
+    local tool duration_str
+    tool=$(echo "$line" | sed -n 's/^.*✓ \([A-Za-z]*\).*/\1/p' | head -1)
+    [ -z "$tool" ] && tool="unknown"
+    duration_str=$(echo "$line" | sed -n 's/.*(\([0-9.]*\)s).*/\1/p')
+    local duration_ms="null"
+    if [ -n "$duration_str" ]; then
+      duration_ms=$(echo "$duration_str" | awk '{printf "%d", $1 * 1000}')
+    fi
     eval "$seq_ref=\$((\$$seq_ref + 1))"
     json_event "$session" "$pane" "$source" "$(eval echo "\$$seq_ref")" "tool_call_completed" \
-      "{\"tool\":$(json_string "$tool"),\"duration_ms\":null}"
+      "{\"tool\":$(json_string "$tool"),\"duration_ms\":$duration_ms}"
     return
   fi
 

@@ -1,0 +1,5 @@
+Error: ENOENT: no such file or directory, open '/tmp/file with "quotes".txt'
+path: C:\Users\test\file.txt
+message with $variables and `backticks`
+line with tabs	between	words
+{"json":"inside output","nested":true}

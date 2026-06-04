@@ -1,0 +1,20 @@
+
+
+
+a
+●
+✓
+● Read
+✓ Read (0.001s)
+You're out of extra usage until 3:00 AM UTC
+out of extra usage
+Claude usage limit reached
+quota exhausted for this billing period
+monthly limit exceeded
+rate limit reached — please wait
+❯
+❯ some leftover text
+◐ Reading file
+◑
+◒
+◓
