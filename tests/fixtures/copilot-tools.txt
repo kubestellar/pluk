@@ -1,0 +1,6 @@
+● Get scanner kick message from kick-agents.sh (shell)
+✓ Get scanner kick message from kick-agents.sh (shell)
+● Check current bead (shell)
+✓ Check current bead (shell)
+● Write scanner bead (shell)
+✓ Write scanner bead (shell)

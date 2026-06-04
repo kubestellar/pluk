@@ -157,6 +157,27 @@ else
   printf '  \033[31mFAIL\033[0m copilot should end in idle, got: %s\n' "$last_state"
 fi
 
+output=$(run_fixture "copilot" "${FIXTURES_DIR}/copilot-tools.txt")
+cop_starts=$(echo "$output" | grep -c '"type":"tool_call_started"' || true)
+cop_ends=$(echo "$output" | grep -c '"type":"tool_call_completed"' || true)
+TESTS=$((TESTS + 1))
+if [ "$cop_starts" -eq 3 ]; then
+  PASS=$((PASS + 1))
+  printf '  \033[32mPASS\033[0m copilot 3 tool starts detected\n'
+else
+  FAIL=$((FAIL + 1))
+  printf '  \033[31mFAIL\033[0m copilot tool starts: expected 3, got %d\n' "$cop_starts"
+fi
+TESTS=$((TESTS + 1))
+if [ "$cop_ends" -eq 3 ]; then
+  PASS=$((PASS + 1))
+  printf '  \033[32mPASS\033[0m copilot 3 tool completions detected\n'
+else
+  FAIL=$((FAIL + 1))
+  printf '  \033[31mFAIL\033[0m copilot tool completions: expected 3, got %d\n' "$cop_ends"
+fi
+assert_event_field "copilot tool type is shell" "$output" "tool_call_started" "tool" "shell"
+
 # ─── False positives ──────────────────────────────────────────────────────────
 
 echo ""

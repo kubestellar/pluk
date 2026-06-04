@@ -93,7 +93,10 @@ pst_classify_line() {
 
   if [ -n "$TOOL_START_PATTERN" ] && echo "$line" | grep -qE "$TOOL_START_PATTERN"; then
     local tool
-    tool=$(echo "$line" | sed -n 's/^.*● \([A-Za-z]*\).*/\1/p' | head -1)
+    # Try parenthesized type first: "● description (shell)" → "shell"
+    tool=$(echo "$line" | sed -n 's/.*(\([a-z]*\))$/\1/p' | head -1)
+    # Fall back to first word after ●: "● Read main.ts" → "Read"
+    [ -z "$tool" ] && tool=$(echo "$line" | sed -n 's/^.*[●] \([A-Za-z]*\).*/\1/p' | head -1)
     [ -z "$tool" ] && tool="unknown"
     eval "$seq_ref=\$((\$$seq_ref + 1))"
     json_event "$session" "$pane" "$source" "$(eval echo "\$$seq_ref")" "tool_call_started" \
@@ -103,7 +106,10 @@ pst_classify_line() {
 
   if [ -n "$TOOL_END_PATTERN" ] && echo "$line" | grep -qE "$TOOL_END_PATTERN"; then
     local tool duration_str
-    tool=$(echo "$line" | sed -n 's/^.*✓ \([A-Za-z]*\).*/\1/p' | head -1)
+    # Try parenthesized type first: "✓ description (shell)" → "shell"
+    tool=$(echo "$line" | sed -n 's/.*(\([a-z]*\))$/\1/p' | head -1)
+    # Fall back to first word after ✓: "✓ Read main.ts (0.1s)" → "Read"
+    [ -z "$tool" ] && tool=$(echo "$line" | sed -n 's/^.*[✓] \([A-Za-z]*\).*/\1/p' | head -1)
     [ -z "$tool" ] && tool="unknown"
     duration_str=$(echo "$line" | sed -n 's/.*(\([0-9.]*\)s).*/\1/p')
     local duration_ms="null"
