@@ -23,9 +23,9 @@ pst_load_patterns() {
   local cli="$1"
   local pattern_file="${PST_PATTERNS_DIR}/${cli}.patterns"
   if [ -f "$pattern_file" ]; then
-    # Strip UTF-8 BOM if present, then source
+    # Strip UTF-8 BOM and Windows CRLF line endings, then source
     local cleaned
-    cleaned=$(sed '1s/^\xef\xbb\xbf//' "$pattern_file" 2>/dev/null || cat "$pattern_file")
+    cleaned=$(sed '1s/^\xef\xbb\xbf//; s/\r$//' "$pattern_file" 2>/dev/null || cat "$pattern_file")
     eval "$cleaned"
     _PST_PATTERNS_LOADED="$cli"
     return 0
