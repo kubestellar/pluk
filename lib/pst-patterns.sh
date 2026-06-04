@@ -23,6 +23,18 @@ pst_load_patterns() {
   local cli="$1"
   local pattern_file="${PST_PATTERNS_DIR}/${cli}.patterns"
   if [ -f "$pattern_file" ]; then
+    # Reset all pattern variables to prevent leakage from previous loads
+    IDLE_PATTERN=""
+    WORKING_PATTERNS=""
+    RATE_LIMIT_PATTERN=""
+    LOGIN_PATTERN=""
+    BYPASS_PATTERN=""
+    TRUST_DIALOG_PATTERN=""
+    TOOL_START_PATTERN=""
+    TOOL_END_PATTERN=""
+    ERROR_PATTERN=""
+    MODEL_PATTERN=""
+    SESSION_END_PATTERN=""
     # Strip UTF-8 BOM and Windows CRLF line endings
     local cleaned
     cleaned=$(sed '1s/^\xef\xbb\xbf//; s/\r$//' "$pattern_file" 2>/dev/null || cat "$pattern_file")
