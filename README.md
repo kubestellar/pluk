@@ -7,7 +7,10 @@ AI coding agents (Claude Code, GitHub Copilot CLI, Gemini CLI, Goose, etc.) prod
 ## Quick start
 
 ```bash
-# Install
+# One-liner install
+curl -fsSL https://raw.githubusercontent.com/kubestellar/pub-sub-tmux/main/install-remote.sh | bash
+
+# Or clone and install
 git clone https://github.com/kubestellar/pub-sub-tmux.git
 cd pub-sub-tmux && make install
 
