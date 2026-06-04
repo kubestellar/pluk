@@ -6,7 +6,7 @@ PST_RUN_DIR="${PST_RUN_DIR:-/var/run/pub-sub-tmux}"
 PST_LOG_DIR="${PST_RUN_DIR}/logs"
 PST_CMD_DIR="${PST_RUN_DIR}/commands"
 PST_CONFIG_DIR="${PST_CONFIG_DIR:-/etc/pub-sub-tmux}"
-PST_PATTERNS_DIR="${PST_CONFIG_DIR}/patterns.d"
+PST_PATTERNS_DIR="${PST_PATTERNS_DIR:-${PST_CONFIG_DIR}/patterns.d}"
 
 PST_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ ! -d "$PST_PATTERNS_DIR" ]; then
