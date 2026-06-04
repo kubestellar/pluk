@@ -131,7 +131,7 @@ should_include() {
   if [ -n "$FILTER" ]; then
     local type
     type=$(_pst_fast_type "$line")
-    if ! echo ",$FILTER," | grep -q ",$type,"; then
+    if ! echo ",$FILTER," | grep -Fq ",$type,"; then
       return 1
     fi
   fi
@@ -172,7 +172,8 @@ else
   # Non-follow mode
   if [ -n "$FILTER" ] && [ -z "$SINCE" ]; then
     # Fast path: filter-only uses grep (much faster than per-line sed for large files)
-    _grep_pattern=$(echo "$FILTER" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d; s/.*/"type":[[:space:]]*"&"/' | tr '\n' '|' | sed 's/|$//')
+    # Escape regex metacharacters in type names, then build alternation pattern
+    _grep_pattern=$(echo "$FILTER" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d; s/[.[\*^$()+?{|\\]/\\&/g; s/.*/"type":[[:space:]]*"&"/' | tr '\n' '|' | sed 's/|$//')
     if [ -n "$LAST_N" ]; then
       tail -n "$LAST_N" "$LOG_FILE" | grep -E "$_grep_pattern" || true
     else
