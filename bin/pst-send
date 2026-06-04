@@ -77,7 +77,8 @@ _pst_write_fifo() {
     sleep 1
     elapsed=$((elapsed + 1))
     if [ "$elapsed" -ge "$SEND_TIMEOUT_SEC" ]; then
-      kill "$wpid" 2>/dev/null
+      kill -9 "$wpid" 2>/dev/null
+      wait "$wpid" 2>/dev/null
       echo "error: write to FIFO timed out after ${SEND_TIMEOUT_SEC}s — is pst-publish running?" >&2
       exit 1
     fi

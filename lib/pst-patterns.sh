@@ -23,10 +23,26 @@ pst_load_patterns() {
   local cli="$1"
   local pattern_file="${PST_PATTERNS_DIR}/${cli}.patterns"
   if [ -f "$pattern_file" ]; then
-    # Strip UTF-8 BOM and Windows CRLF line endings, then source
+    # Strip UTF-8 BOM and Windows CRLF line endings
     local cleaned
     cleaned=$(sed '1s/^\xef\xbb\xbf//; s/\r$//' "$pattern_file" 2>/dev/null || cat "$pattern_file")
-    eval "$cleaned"
+    # Validate: only allow lines matching VAR_NAME='value' or comments/blanks
+    local line_num=0 bad_lines=""
+    while IFS= read -r line; do
+      line_num=$((line_num + 1))
+      [ -z "$line" ] && continue
+      [[ "$line" =~ ^[[:space:]]*# ]] && continue
+      if ! echo "$line" | grep -qE "^[A-Z_][A-Z_0-9]*='[^']*'$"; then
+        bad_lines="${bad_lines} ${line_num}"
+      fi
+    done <<< "$cleaned"
+    if [ -n "$bad_lines" ]; then
+      echo "pst: warning: pattern file $pattern_file has invalid lines:$bad_lines (only VAR='value' allowed)" >&2
+    fi
+    # Only eval single-quoted assignments (safe from injection)
+    local safe_lines
+    safe_lines=$(echo "$cleaned" | grep -E "^[A-Z_][A-Z_0-9]*='[^']*'$")
+    eval "$safe_lines"
     _PST_PATTERNS_LOADED="$cli"
     return 0
   fi
