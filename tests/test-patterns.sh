@@ -149,6 +149,17 @@ else
   printf '  \033[31mFAIL\033[0m copilot should end in idle, got: %s\n' "$last_state"
 fi
 
+# ─── False positives ──────────────────────────────────────────────────────────
+
+echo ""
+echo "=== False positive resistance ==="
+
+output=$(run_fixture "claude" "${FIXTURES_DIR}/false-positives.txt")
+assert_no_event "no false error from code" "$output" "error"
+assert_no_event "no false rate_limit from code" "$output" "rate_limit"
+assert_no_event "no false tool_call_started" "$output" "tool_call_started"
+assert_no_event "no false tool_call_completed" "$output" "tool_call_completed"
+
 # ─── JSON validity ─────────────────────────────────────────────────────────────
 
 echo ""
