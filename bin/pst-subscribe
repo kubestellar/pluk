@@ -83,7 +83,12 @@ should_include() {
   if [ -n "$SINCE" ] && [ -n "$SINCE_CUTOFF" ]; then
     local ts
     ts=$(echo "$line" | sed -n 's/.*"ts"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-    if [ -n "$ts" ] && [[ "$ts" < "$SINCE_CUTOFF" ]]; then
+    # Normalize: strip sub-second precision (.000Z → Z) for consistent comparison
+    local ts_norm="$ts"
+    if [[ "$ts" == *"."* ]]; then
+      ts_norm="${ts%.*}Z"
+    fi
+    if [ -n "$ts" ] && [[ "$ts_norm" < "$SINCE_CUTOFF" ]]; then
       return 1
     fi
   fi

@@ -6,14 +6,14 @@ PST_RUN_DIR="${PST_RUN_DIR:-/var/run/pub-sub-tmux}"
 PST_LOG_DIR="${PST_RUN_DIR}/logs"
 PST_CMD_DIR="${PST_RUN_DIR}/commands"
 PST_CONFIG_DIR="${PST_CONFIG_DIR:-/etc/pub-sub-tmux}"
+_PST_PATTERNS_EXPLICIT="${PST_PATTERNS_DIR:-}"
 PST_PATTERNS_DIR="${PST_PATTERNS_DIR:-${PST_CONFIG_DIR}/patterns.d}"
 
 PST_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ ! -d "$PST_PATTERNS_DIR" ]; then
-  # Try repo layout: lib/../config/patterns.d
+if [ ! -d "$PST_PATTERNS_DIR" ] && [ -z "$_PST_PATTERNS_EXPLICIT" ]; then
+  # Only try fallbacks when PST_PATTERNS_DIR was not explicitly set
   if [ -d "${PST_SCRIPT_DIR}/../config/patterns.d" ]; then
     PST_PATTERNS_DIR="${PST_SCRIPT_DIR}/../config/patterns.d"
-  # Try installed layout: lib/pub-sub-tmux/../../etc/pub-sub-tmux/patterns.d
   elif [ -d "${PST_SCRIPT_DIR}/../../etc/pub-sub-tmux/patterns.d" ]; then
     PST_PATTERNS_DIR="${PST_SCRIPT_DIR}/../../etc/pub-sub-tmux/patterns.d"
   fi
