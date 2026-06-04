@@ -102,6 +102,7 @@ pst_ensure_fifo "$CMD_FIFO"
 CMD_READER_PID=""
 if [ -p "$CMD_FIFO" ]; then
   (
+    local_seq=1000000
     exec 3<>"$CMD_FIFO"
     while IFS= read -r cmd_json <&3; do
       [ -z "$cmd_json" ] && continue
@@ -115,8 +116,8 @@ if [ -p "$CMD_FIFO" ]; then
             sleep 0.3
             tmux send-keys -t "$SESSION" Enter
           fi
-          SEQ=$((SEQ + 1))
-          json_event "$SESSION" "$PANE" "$SOURCE" "$SEQ" "command_received" \
+          local_seq=$((local_seq + 1))
+          json_event "$SESSION" "$PANE" "cmd" "$local_seq" "command_received" \
             "{\"text\":$(json_string "$text"),\"sender\":\"pst-send\"}" >> "$LOG_FILE"
           ;;
         send_special)
