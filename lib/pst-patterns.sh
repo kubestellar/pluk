@@ -63,7 +63,14 @@ pst_classify_line() {
 
   if [ -n "$RATE_LIMIT_PATTERN" ] && echo "$line" | grep -qE "$RATE_LIMIT_PATTERN"; then
     local resets_at=""
+    # Try AM/PM format, then 24h format, then relative ("in N hours/minutes")
     resets_at=$(echo "$line" | grep -oE '[0-9]{1,2}(:[0-9]{2})?\s*[aApP][mM]' | head -1)
+    if [ -z "$resets_at" ]; then
+      resets_at=$(echo "$line" | grep -oE '(at |@ ?)[0-9]{1,2}:[0-9]{2}' | sed 's/^at //; s/^@ ?//' | head -1)
+    fi
+    if [ -z "$resets_at" ]; then
+      resets_at=$(echo "$line" | grep -oE 'in [0-9]+ (hour|minute|second)s?' | head -1)
+    fi
     eval "$seq_ref=\$((\$$seq_ref + 1))"
     json_event "$session" "$pane" "$source" "$(eval echo "\$$seq_ref")" "rate_limit" \
       "{\"cli\":$(json_string "$_PST_PATTERNS_LOADED"),\"message\":$(json_string "$line"),\"resets_at\":$(json_string "$resets_at")}"

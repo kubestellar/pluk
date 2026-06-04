@@ -154,8 +154,8 @@ if [ -n "$SINCE" ]; then
     d) local_seconds=$((local_val * 86400)) ;;
     *) echo "error: invalid --since unit (use s/m/h/d)" >&2; exit 1 ;;
   esac
-  SINCE_CUTOFF=$(date -u -d "-${local_seconds} seconds" +%Y-%m-%dT%H:%M:%S 2>/dev/null || \
-                 date -u -v-"${local_seconds}"S +%Y-%m-%dT%H:%M:%S 2>/dev/null || echo "")
+  SINCE_CUTOFF=$(date -u -d "-${local_seconds} seconds" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || \
+                 date -u -v-"${local_seconds}"S +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
 fi
 
 if [ "$FOLLOW" = "true" ]; then
