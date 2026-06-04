@@ -76,6 +76,11 @@ if [ -z "$SESSION" ]; then
   usage
 fi
 
+# Normalize filter: strip whitespace around each type
+if [ -n "$FILTER" ]; then
+  FILTER=$(echo "$FILTER" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | tr '\n' ',' | sed 's/,$//')
+fi
+
 LOG_FILE="$(pst_log_file "$SESSION")"
 
 if [ ! -f "$LOG_FILE" ]; then
@@ -146,7 +151,7 @@ else
   # Non-follow mode
   if [ -n "$FILTER" ] && [ -z "$SINCE" ]; then
     # Fast path: filter-only uses grep (much faster than per-line sed for large files)
-    _grep_pattern=$(echo "$FILTER" | tr ',' '\n' | sed 's/.*/"type":[[:space:]]*"&"/' | tr '\n' '|' | sed 's/|$//')
+    _grep_pattern=$(echo "$FILTER" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d; s/.*/"type":[[:space:]]*"&"/' | tr '\n' '|' | sed 's/|$//')
     if [ -n "$LAST_N" ]; then
       tail -n "$LAST_N" "$LOG_FILE" | grep -E "$_grep_pattern" || true
     else
