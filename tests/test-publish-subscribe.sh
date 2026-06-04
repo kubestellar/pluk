@@ -71,12 +71,15 @@ assert_true "log file created" test -f "$LOG_FILE"
 echo ""
 echo "=== Raw output events ==="
 
-tmux send-keys -t "$TEST_SESSION" "echo hello-from-pst-test" Enter
-sleep 5
+tmux send-keys -t "$TEST_SESSION" "echo pst-hello-42" Enter
+for _hw in 1 2 3 4 5; do
+  grep -q 'pst-hello-42' "$LOG_FILE" 2>/dev/null && break
+  sleep 2
+done
 
 assert_true "log file has content" test -s "$LOG_FILE"
 assert_true "raw_output events present" grep -q '"type":"raw_output"' "$LOG_FILE"
-assert_true "hello text captured" grep -q 'hello-from-pst-test' "$LOG_FILE"
+assert_true "hello text captured" grep -q 'pst-hello-42' "$LOG_FILE"
 
 echo ""
 echo "=== Sequence numbers ==="

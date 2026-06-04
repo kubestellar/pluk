@@ -71,7 +71,17 @@ pst_ensure_dirs
 
 LOG_FILE="$(pst_log_file "$SESSION")"
 CMD_FIFO="$(pst_cmd_fifo "$SESSION")"
-touch "$LOG_FILE"
+
+if [ -d "$LOG_FILE" ]; then
+  pst_log "error: log path is a directory: $LOG_FILE"
+  exit 1
+fi
+
+touch "$LOG_FILE" 2>/dev/null
+if [ ! -w "$LOG_FILE" ]; then
+  pst_log "error: cannot write to log file: $LOG_FILE"
+  exit 1
+fi
 
 SEQ=0
 if [ -f "$LOG_FILE" ]; then
