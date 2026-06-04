@@ -151,12 +151,15 @@ rm -f "$FILTER_OUT"
 echo ""
 echo "=== Multiple output events ==="
 
-tmux send-keys -t "$TEST_SESSION" "echo pst-multi-a" Enter
-sleep 1
-tmux send-keys -t "$TEST_SESSION" "echo pst-multi-b" Enter
-sleep 1
-tmux send-keys -t "$TEST_SESSION" "echo pst-multi-c" Enter
-sleep 3
+for n in pst-multi-a pst-multi-b pst-multi-c; do
+  tmux send-keys -t "$TEST_SESSION" "echo $n" Enter
+  sleep 2
+done
+# Wait for last event to appear
+for _mw in 1 2 3 4 5; do
+  grep -q "pst-multi-c" "$LOG_FILE" 2>/dev/null && break
+  sleep 2
+done
 
 for n in pst-multi-a pst-multi-b pst-multi-c; do
   assert_true "captured $n" grep -q "$n" "$LOG_FILE"
@@ -186,7 +189,12 @@ assert_true "command FIFO exists" test -p "$CMD_FIFO"
 before_count=$(wc -l < "$LOG_FILE" | tr -d ' ')
 "${BIN_DIR}/pst-send" --session "$TEST_SESSION" --text "echo sent-via-pst" --enter 2>/dev/null &
 SEND_PID=$!
-sleep 3
+
+# Wait for the sent text to appear in the log
+for _sw in 1 2 3 4 5 6; do
+  grep -q "sent-via-pst" "$LOG_FILE" 2>/dev/null && break
+  sleep 2
+done
 
 assert_true "pst-send text appeared in pane" tmux capture-pane -t "$TEST_SESSION" -p | grep -q "sent-via-pst"
 
