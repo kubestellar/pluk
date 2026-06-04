@@ -9,6 +9,7 @@ install:
 	@bash install.sh $(PREFIX)
 
 uninstall:
+	@test -n "$(PREFIX)" || { echo "error: PREFIX is empty — refusing to uninstall"; exit 1; }
 	@rm -f $(BINDIR)/pst-publish $(BINDIR)/pst-subscribe $(BINDIR)/pst-send
 	@rm -rf $(LIBDIR)
 	@rm -rf $(CONFDIR)

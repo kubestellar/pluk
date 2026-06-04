@@ -3,6 +3,10 @@
 set -euo pipefail
 
 PREFIX="${1:-/usr/local}"
+if [ -z "$PREFIX" ]; then
+  echo "error: PREFIX is empty — refusing to install" >&2
+  exit 1
+fi
 BINDIR="${PREFIX}/bin"
 LIBDIR="${PREFIX}/lib/pub-sub-tmux"
 CONFDIR="${PREFIX}/etc/pub-sub-tmux"
