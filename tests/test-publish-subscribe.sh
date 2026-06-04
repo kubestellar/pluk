@@ -151,10 +151,14 @@ rm -f "$FILTER_OUT"
 echo ""
 echo "=== Multiple output events ==="
 
-tmux send-keys -t "$TEST_SESSION" "echo line-one && echo line-two && echo line-three" Enter
-sleep 2
+tmux send-keys -t "$TEST_SESSION" "echo pst-multi-a" Enter
+sleep 1
+tmux send-keys -t "$TEST_SESSION" "echo pst-multi-b" Enter
+sleep 1
+tmux send-keys -t "$TEST_SESSION" "echo pst-multi-c" Enter
+sleep 3
 
-for n in line-one line-two line-three; do
+for n in pst-multi-a pst-multi-b pst-multi-c; do
   assert_true "captured $n" grep -q "$n" "$LOG_FILE"
 done
 
