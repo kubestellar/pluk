@@ -83,7 +83,7 @@ should_include() {
   if [ -n "$SINCE" ] && [ -n "$SINCE_CUTOFF" ]; then
     local ts
     ts=$(echo "$line" | sed -n 's/.*"ts"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-    if [ -n "$ts" ] && [[ ! "$ts" > "$SINCE_CUTOFF" ]]; then
+    if [ -n "$ts" ] && [[ "$ts" < "$SINCE_CUTOFF" ]]; then
       return 1
     fi
   fi
@@ -124,11 +124,28 @@ if [ "$FOLLOW" = "true" ]; then
     should_include "$line" && echo "$line"
   done
 else
-  if [ -n "$LAST_N" ]; then
-    tail -n "$LAST_N" "$LOG_FILE"
+  # Non-follow mode
+  if [ -n "$FILTER" ] && [ -z "$SINCE" ]; then
+    # Fast path: filter-only uses grep (much faster than per-line sed for large files)
+    _grep_pattern=$(echo "$FILTER" | tr ',' '\n' | sed 's/.*/"type":[[:space:]]*"&"/' | tr '\n' '|' | sed 's/|$//')
+    if [ -n "$LAST_N" ]; then
+      tail -n "$LAST_N" "$LOG_FILE" | grep -E "$_grep_pattern" || true
+    else
+      grep -E "$_grep_pattern" "$LOG_FILE" || true
+    fi
+  elif [ -z "$FILTER" ] && [ -z "$SINCE" ]; then
+    if [ -n "$LAST_N" ]; then
+      tail -n "$LAST_N" "$LOG_FILE"
+    else
+      cat "$LOG_FILE"
+    fi
   else
-    cat "$LOG_FILE"
-  fi | while IFS= read -r line; do
-    should_include "$line" && echo "$line"
-  done
+    if [ -n "$LAST_N" ]; then
+      tail -n "$LAST_N" "$LOG_FILE"
+    else
+      cat "$LOG_FILE"
+    fi | while IFS= read -r line; do
+      should_include "$line" && echo "$line"
+    done
+  fi
 fi
