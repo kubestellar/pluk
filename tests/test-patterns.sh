@@ -92,7 +92,15 @@ assert_has_event "trust dialog detected" "$output" "trust_dialog"
 
 output=$(run_fixture "claude" "${FIXTURES_DIR}/claude-idle.txt")
 assert_has_event "idle state detected" "$output" "state_change"
-assert_event_field "idle state value" "$output" "state_change" "to" "idle"
+last_idle_state=$(echo "$output" | grep '"type":"state_change"' | tail -1)
+TESTS=$((TESTS + 1))
+if echo "$last_idle_state" | grep -q '"to":"idle"'; then
+  PASS=$((PASS + 1))
+  printf '  \033[32mPASS\033[0m idle state ends in idle\n'
+else
+  FAIL=$((FAIL + 1))
+  printf '  \033[31mFAIL\033[0m idle fixture should end in idle, got: %s\n' "$last_idle_state"
+fi
 
 output=$(run_fixture "claude" "${FIXTURES_DIR}/claude-working.txt")
 assert_has_event "working state detected" "$output" "state_change"

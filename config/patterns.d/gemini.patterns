@@ -1,7 +1,7 @@
 # gemini.patterns — Gemini CLI output patterns
 
 IDLE_PATTERN='>\s*$|❯\s*$'
-WORKING_PATTERNS='[◐◑◒◓⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|Thinking|Generating'
+WORKING_PATTERNS='◐|◑|◒|◓|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏|Thinking|Generating'
 RATE_LIMIT_PATTERN='rate limit|quota exceeded|resource exhausted|429'
 LOGIN_PATTERN='gcloud auth login|authenticate|sign in'
 TRUST_DIALOG_PATTERN=''

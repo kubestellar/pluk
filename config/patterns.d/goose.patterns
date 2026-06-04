@@ -1,7 +1,7 @@
 # goose.patterns — Goose CLI output patterns
 
 IDLE_PATTERN='>\s*$|❯\s*$|goose>'
-WORKING_PATTERNS='[◐◑◒◓⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|thinking|processing'
+WORKING_PATTERNS='◐|◑|◒|◓|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏|thinking|processing'
 RATE_LIMIT_PATTERN='rate limit|quota exceeded|429|too many requests'
 LOGIN_PATTERN='authenticate|sign in|login required'
 TRUST_DIALOG_PATTERN=''
