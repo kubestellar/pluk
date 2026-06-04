@@ -85,6 +85,12 @@ if echo "$SESSION" | grep -qE '[[:space:]/\\:]'; then
   pst_log "warning: session name '$SESSION' contains spaces, slashes, or colons — may cause issues with tmux and file paths"
 fi
 
+MAX_SESSION_LEN=200
+if [ "${#SESSION}" -gt "$MAX_SESSION_LEN" ]; then
+  pst_log "error: session name too long (${#SESSION} chars, max $MAX_SESSION_LEN) — filesystem filename limit"
+  exit 1
+fi
+
 pst_ensure_dirs
 
 LOG_FILE="$(pst_log_file "$SESSION")"
