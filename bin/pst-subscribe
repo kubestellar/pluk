@@ -5,7 +5,17 @@
 # Usage: pst-subscribe <session> [--filter type1,type2] [--since 5m] [--last N]
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_resolve_script() {
+  local src="$1"
+  while [ -L "$src" ]; do
+    local dir="$(cd "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ "$src" != /* ]] && src="$dir/$src"
+  done
+  cd "$(dirname "$src")" 2>/dev/null && pwd
+}
+SCRIPT_DIR="$(_resolve_script "$0")"
+[ -z "$SCRIPT_DIR" ] && SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "${SCRIPT_DIR}/../lib/pst-common.sh" ]; then
   LIB_DIR="${SCRIPT_DIR}/../lib"
 elif [ -f "${SCRIPT_DIR}/../lib/pub-sub-tmux/pst-common.sh" ]; then
