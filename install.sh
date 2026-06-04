@@ -7,7 +7,13 @@ BINDIR="${PREFIX}/bin"
 LIBDIR="${PREFIX}/lib/pub-sub-tmux"
 CONFDIR="${PREFIX}/etc/pub-sub-tmux"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_src="$0"
+while [ -L "$_src" ]; do
+  _dir="$(cd "$(dirname "$_src")" && pwd)"
+  _src="$(readlink "$_src")"
+  [[ "$_src" != /* ]] && _src="$_dir/$_src"
+done
+SCRIPT_DIR="$(cd "$(dirname "$_src")" && pwd)"
 
 echo "Installing pub-sub-tmux to ${PREFIX}..."
 
@@ -26,6 +32,8 @@ for pat in "${SCRIPT_DIR}"/config/patterns.d/*.patterns; do
   dest="${CONFDIR}/patterns.d/$(basename "$pat")"
   if [ ! -f "$dest" ]; then
     install -m 644 "$pat" "$dest"
+  elif ! cmp -s "$pat" "$dest"; then
+    echo "  note: $(basename "$pat") differs from installed version (not overwritten)"
   fi
 done
 
