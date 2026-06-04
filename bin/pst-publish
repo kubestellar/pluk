@@ -156,7 +156,7 @@ cleanup() {
   [ -n "$CMD_READER_PID" ] && kill "$CMD_READER_PID" 2>/dev/null || true
   exit 0
 }
-trap cleanup TERM INT EXIT
+trap cleanup TERM INT HUP EXIT
 
 pst_log "publisher started: session=$SESSION pane=$PANE cli=$CLI source=$SOURCE"
 
