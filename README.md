@@ -48,6 +48,7 @@ pst-send --session mysession --text "read CLAUDE.md" --enter
   "v": 1,
   "ts": "2026-06-04T12:34:56.000Z",
   "seq": 42,
+  "pid": 12345,
   "session": "scanner",
   "pane": "0",
   "source": "pipe-pane",
