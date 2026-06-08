@@ -4,28 +4,56 @@ Pluk structured events from non-deterministic AI agent terminal output.
 
 AI coding agents (Claude Code, GitHub Copilot CLI, Gemini CLI, Goose, etc.) produce rich but unstructured terminal output — spinners, tool calls, rate limit messages, login prompts, error states. This project captures that output via `tmux pipe-pane` and classifies it into a structured JSONL event stream that any system can subscribe to.
 
+**Single compiled Go binary. No dependencies. 3.6MB.**
+
 ## Quick start
 
 ```bash
-# One-liner install
-curl -fsSL https://raw.githubusercontent.com/kubestellar/pluk/main/install-remote.sh | bash
-
-# Or clone and install
+# Clone and build
 git clone https://github.com/kubestellar/pluk.git
-cd pluk && make install
+cd pluk
+go build -o pluk ./cmd/pluk/
 
-# Attach publisher to an existing tmux session
-tmux pipe-pane -t mysession -o "pluk-publish --session mysession --cli claude 2>/dev/null"
+# Create symlinks for multi-call binary
+ln -sf pluk pluk-publish
+ln -sf pluk pluk-subscribe
+ln -sf pluk pluk-send
 
-# Subscribe to events (in another terminal)
-pluk-subscribe mysession
-
-# Subscribe with filter
-pluk-subscribe mysession --filter "rate_limit,state_change,error"
-
-# Send a command back to the session
-pluk-send --session mysession --text "read CLAUDE.md" --enter
+# Or use make
+make install
 ```
+
+## Usage with a real AI agent
+
+```bash
+# 1. Start an AI agent in tmux
+tmux new-session -d -s my-agent
+tmux send-keys -t my-agent "claude" Enter
+
+# 2. Attach pluk to capture output (set pattern dir to where you cloned)
+tmux pipe-pane -t my-agent -o \
+  "PLUK_RUN_DIR=/tmp/pluk-run \
+   PLUK_PATTERNS_DIR=/path/to/pluk/config/patterns.d \
+   /path/to/pluk-publish --session my-agent --cli claude"
+
+# 3. Subscribe to events in real-time (another terminal)
+PLUK_RUN_DIR=/tmp/pluk-run ./pluk subscribe my-agent
+
+# 4. Subscribe with filter (only classified events, no raw output)
+PLUK_RUN_DIR=/tmp/pluk-run ./pluk subscribe my-agent \
+  --filter "state_change,tool_call_started,tool_call_completed,rate_limit,error"
+
+# 5. Send commands to the agent
+./pluk-send --session my-agent --text "what is 2+2?" --enter
+
+# 6. Watch the agent work in tmux
+tmux attach -t my-agent
+```
+
+**Three terminals:**
+- **Terminal 1**: `tmux attach -t my-agent` — watch the agent work
+- **Terminal 2**: `./pluk subscribe my-agent` — see classified events stream
+- **Terminal 3**: `./pluk-send --session my-agent --text "..." --enter` — send commands
 
 ## Event types
 
@@ -49,17 +77,16 @@ pluk-send --session mysession --text "read CLAUDE.md" --enter
 ```json
 {
   "v": 1,
-  "ts": "2026-06-04T12:34:56.000Z",
+  "ts": "2026-06-08T19:57:25.192Z",
   "seq": 42,
-  "pid": 12345,
-  "session": "scanner",
+  "pid": 0,
+  "session": "my-agent",
   "pane": "0",
   "source": "pipe-pane",
-  "type": "rate_limit",
+  "type": "tool_call_started",
   "data": {
-    "cli": "claude",
-    "message": "out of extra usage",
-    "resets_at": "3am"
+    "tool": "Read",
+    "input_preview": "● Read main.go"
   }
 }
 ```
@@ -79,62 +106,76 @@ Adding a new CLI is a single pattern file — no code changes needed.
 
 ```
 ┌──────────────────┐    ┌────────────────┐    ┌────────────────┐
-│  tmux session    │───▶│  pluk-publish  │───▶│ session.jsonl  │
+│  tmux session    │───▶│  pluk publish  │───▶│ session.jsonl  │
 │  (any AI CLI)    │    │  (pipe-pane)   │    │ (append-only)  │
 └──────────────────┘    └────────────────┘    └───────┬────────┘
                                                       │
                              ┌────────────────┐       │ tail -f
-                             │ pluk-subscribe │◀──────┘
+                             │ pluk subscribe │◀──────┘
                              │ (any number)   │
                              └────────────────┘
 
-┌──────────────────┐    ┌────────────────┐    ┌────────────────┐
-│  orchestrator    │───▶│   pluk-send    │───▶│  command FIFO  │
-│  (watcher, etc.) │    │  (per-session) │    │ (named pipe)   │
-└──────────────────┘    └────────────────┘    └───────┬────────┘
-                                                      │
-                                                      ▼
-                                               tmux send-keys
+┌──────────────────┐    ┌────────────────┐
+│  orchestrator    │───▶│   pluk send    │───▶ tmux send-keys
+│  (watcher, etc.) │    │  (per-session) │
+└──────────────────┘    └────────────────┘
 ```
 
+- **Single Go binary** — `pluk publish`, `pluk subscribe`, `pluk send` subcommands
+- **Multi-call binary** — symlinks `pluk-publish`, `pluk-subscribe`, `pluk-send` also work
 - **No broker process** — log-based pub-sub using append-only JSONL files
-- **Multiple subscribers** — any number of `tail -f` processes on the same file
-- **Bidirectional** — named FIFO per session for sending commands back
-- **Atomic writes** — JSON lines under PIPE_BUF (4096 bytes) are atomic on Linux
+- **Multiple subscribers** — any number of processes tailing the same file
+- **Bidirectional** — `pluk send` delivers commands via tmux send-keys
+- **Compiled regex** — pattern matching in Go, no perl dependency
 
 ## Docker / Container install
 
 ```dockerfile
-# Install pluk in a container image
+# Build pluk from source in a container (requires Go)
 RUN git clone --depth 1 https://github.com/kubestellar/pluk.git /tmp/pluk && \
-    bash /tmp/pluk/install.sh /usr/local && \
+    cd /tmp/pluk && go build -o /usr/local/bin/pluk ./cmd/pluk/ && \
+    ln -sf pluk /usr/local/bin/pluk-publish && \
+    ln -sf pluk /usr/local/bin/pluk-subscribe && \
+    ln -sf pluk /usr/local/bin/pluk-send && \
+    mkdir -p /usr/local/etc/pluk/patterns.d && \
+    cp -r /tmp/pluk/config/patterns.d/* /usr/local/etc/pluk/patterns.d/ && \
     rm -rf /tmp/pluk && \
-    mkdir -p /var/run/pluk/logs /var/run/pluk/commands
+    mkdir -p /var/run/pluk/logs /var/run/pluk/commands && \
+    chmod 1777 /var/run/pluk/logs /var/run/pluk/commands
 ```
 
-The runtime directories under `/var/run/pluk/` must exist before `pluk-publish` runs. If your container uses a tmpfs `/var/run`, create them at startup:
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PLUK_RUN_DIR` | `/var/run/pluk` | Runtime directory for logs and commands |
+| `PLUK_PATTERNS_DIR` | `/etc/pluk/patterns.d` | Pattern files directory |
+| `PLUK_CONFIG_DIR` | `/etc/pluk` | Config root directory |
+
+## Building from source
 
 ```bash
-mkdir -p /var/run/pluk/logs /var/run/pluk/commands
+git clone https://github.com/kubestellar/pluk.git
+cd pluk
+go build -o pluk ./cmd/pluk/
+
+# Verify
+./pluk version
+# pluk 2.0.0 (go)
+
+# Test event classification
+printf '● Read main.go\n✓ Read main.go (0.3s)\nout of extra usage\n❯ \n' | \
+  PLUK_PATTERNS_DIR=./config/patterns.d \
+  PLUK_RUN_DIR=/tmp/pluk-test \
+  ./pluk publish --session test --cli claude --no-raw
+cat /tmp/pluk-test/logs/test.jsonl
 ```
 
-Attach to a tmux session in your entrypoint or agent manager:
+## Performance
 
-```bash
-tmux pipe-pane -t mysession -o "pluk-publish --session mysession --cli claude"
-```
-
-## Dependencies
-
-- bash 4.4+, coreutils, tmux 3.2+
-- perl (for ANSI escape stripping)
-- Optional: `jq` (for subscriber filtering)
-
-## Testing
-
-```bash
-make test
-```
+- **10,000 lines in 0.15 seconds** (64K lines/sec)
+- **3.6MB** single static binary
+- Zero external dependencies
 
 ## License
 

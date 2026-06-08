@@ -225,26 +225,30 @@ func cmdSubscribe(args []string) {
 		}
 	}
 
-	scanner := bufio.NewScanner(f)
+	reader := bufio.NewReader(f)
 	for {
-		if scanner.Scan() {
-			line := scanner.Text()
-			if filter != "" {
-				var e events.Event
-				if json.Unmarshal([]byte(line), &e) == nil {
-					if !filterTypes[e.Type] {
-						continue
-					}
-				}
-			}
-			fmt.Println(line)
-		} else {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			// EOF — wait and retry (tail -f behavior)
 			time.Sleep(500 * time.Millisecond)
-			// Check if file was rotated
-			if _, err := f.Stat(); err != nil {
+			if _, statErr := f.Stat(); statErr != nil {
 				return
 			}
+			continue
 		}
+		line = strings.TrimRight(line, "\n")
+		if line == "" {
+			continue
+		}
+		if len(filterTypes) > 0 {
+			var e events.Event
+			if json.Unmarshal([]byte(line), &e) == nil {
+				if !filterTypes[e.Type] {
+					continue
+				}
+			}
+		}
+		fmt.Println(line)
 	}
 }
 
