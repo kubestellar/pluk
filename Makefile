@@ -1,27 +1,28 @@
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
-LIBDIR ?= $(PREFIX)/lib/pub-sub-tmux
-CONFDIR ?= $(PREFIX)/etc/pub-sub-tmux
+CONFDIR ?= $(PREFIX)/etc/pluk
 
-.PHONY: install uninstall test test-patterns test-integration test-edge-cases
+.PHONY: build install uninstall clean
 
-install:
-	@bash install.sh $(PREFIX)
+build:
+	go build -o pluk ./cmd/pluk/
+
+install: build
+	@mkdir -p $(BINDIR) $(CONFDIR)/patterns.d
+	@cp pluk $(BINDIR)/pluk
+	@chmod +x $(BINDIR)/pluk
+	@ln -sf pluk $(BINDIR)/pluk-publish
+	@ln -sf pluk $(BINDIR)/pluk-subscribe
+	@ln -sf pluk $(BINDIR)/pluk-send
+	@cp -r config/patterns.d/* $(CONFDIR)/patterns.d/ 2>/dev/null || true
+	@mkdir -p /var/run/pluk/logs /var/run/pluk/commands
+	@chmod 1777 /var/run/pluk/logs /var/run/pluk/commands 2>/dev/null || true
+	@echo "pluk installed to $(BINDIR)/pluk"
 
 uninstall:
-	@test -n "$(PREFIX)" || { echo "error: PREFIX is empty — refusing to uninstall"; exit 1; }
-	@rm -f $(BINDIR)/pst-publish $(BINDIR)/pst-subscribe $(BINDIR)/pst-send
-	@rm -rf $(LIBDIR)
+	@rm -f $(BINDIR)/pluk $(BINDIR)/pluk-publish $(BINDIR)/pluk-subscribe $(BINDIR)/pluk-send
 	@rm -rf $(CONFDIR)
-	@echo "pub-sub-tmux removed from $(BINDIR)"
+	@echo "pluk removed from $(BINDIR)"
 
-test: test-patterns test-integration test-edge-cases
-
-test-patterns:
-	@bash tests/test-patterns.sh
-
-test-integration:
-	@bash tests/test-publish-subscribe.sh
-
-test-edge-cases:
-	@bash tests/test-edge-cases.sh
+clean:
+	@rm -f pluk
