@@ -2,6 +2,7 @@ package classify
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -69,6 +70,7 @@ func compileOptional(pattern string) *regexp.Regexp {
 	}
 	re, err := regexp.Compile(pattern)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "pluk: invalid pattern %q: %v\n", pattern, err)
 		return nil
 	}
 	return re
