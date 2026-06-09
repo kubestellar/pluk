@@ -200,12 +200,20 @@ func cmdSubscribe(args []string) {
 
 	logFile := filepath.Join(runDir(), "logs", session+".jsonl")
 
-	// Wait for file to exist
+	// Wait for file to exist (timeout after 60s)
+	const maxWaitSeconds = 60
+	waited := 0
+	fmt.Fprintf(os.Stderr, "pluk: waiting for %s ...\n", logFile)
 	for {
 		if _, err := os.Stat(logFile); err == nil {
 			break
 		}
+		if waited >= maxWaitSeconds {
+			fmt.Fprintf(os.Stderr, "pluk: timeout waiting for log file %s (waited %ds)\n", logFile, maxWaitSeconds)
+			os.Exit(1)
+		}
 		time.Sleep(1 * time.Second)
+		waited++
 	}
 
 	f, err := os.Open(logFile)
