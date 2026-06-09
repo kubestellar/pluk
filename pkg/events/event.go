@@ -3,6 +3,7 @@ package events
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -23,7 +24,7 @@ func New(session, pane, source string, seq int, eventType string, data map[strin
 		Version: 1,
 		TS:      time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 		Seq:     seq,
-		PID:     0,
+		PID:     os.Getpid(),
 		Session: session,
 		Pane:    pane,
 		Source:  source,
