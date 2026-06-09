@@ -65,10 +65,7 @@ func (c *Classifier) Classify(line string) *events.Event {
 
 	if e := c.matchPattern(c.patterns.ToolStart, line, "tool_call_started", func() map[string]string {
 		tool := extractTool(line)
-		preview := line
-		if len(preview) > 120 {
-			preview = preview[:120]
-		}
+		preview := truncateRunes(line, 120)
 		return map[string]string{"tool": tool, "input_preview": preview}
 	}); e != nil {
 		return e
@@ -182,7 +179,15 @@ func extractResetTime(line string) string {
 	return ""
 }
 
-var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[()][0-9A-B]|\x0f|\x1b=|\x1b>`)
+var ansiRe = regexp.MustCompile(`\x1b\[[\?]?[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[()][0-9A-B]|\x0f|\x1b=|\x1b>`)
+
+func truncateRunes(s string, maxRunes int) string {
+	runes := []rune(s)
+	if len(runes) <= maxRunes {
+		return s
+	}
+	return string(runes[:maxRunes])
+}
 
 func StripANSI(line string) string {
 	return strings.TrimSpace(ansiRe.ReplaceAllString(line, ""))
