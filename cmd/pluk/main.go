@@ -161,7 +161,7 @@ func cmdPublish(args []string) {
 
 		// Also emit raw_output unless suppressed
 		if !noRaw {
-			rawEvent := classifier.RawOutput(clean)
+			rawEvent := classifier.RawOutput(raw)
 			fmt.Fprintln(f, rawEvent.JSON())
 		}
 	}
