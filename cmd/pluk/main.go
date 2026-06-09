@@ -138,8 +138,6 @@ func cmdPublish(args []string) {
 	}
 
 	classifier := classify.New(patterns, session, pane, "pipe-pane")
-	source := "pipe-pane"
-	_ = source
 
 	fmt.Fprintf(os.Stderr, "pluk: publisher started: session=%s pane=%s cli=%s\n", session, pane, cli)
 
