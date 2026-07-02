@@ -1,4 +1,0 @@
-Do you trust the files in this folder?
-  /home/dev/project
-  Claude wants to access this folder to assist you.
-  [Yes] [No]

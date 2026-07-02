@@ -1,2 +1,0 @@
-  bypass permissions on this project
-  shift+tab to cycle, enter to confirm
