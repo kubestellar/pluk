@@ -1,182 +1,191 @@
-# 🎸 Pluk
+# @kubestellar/pluk
 
-Pluk structured events from non-deterministic AI agent terminal output.
+Pluk structured events from AI agent terminal output.
 
-AI coding agents (Claude Code, GitHub Copilot CLI, Gemini CLI, Goose, etc.) produce rich but unstructured terminal output — spinners, tool calls, rate limit messages, login prompts, error states. This project captures that output via `tmux pipe-pane` and classifies it into a structured JSONL event stream that any system can subscribe to.
+TypeScript port of [kubestellar/pluk](https://github.com/kubestellar/pluk) — classify, subscribe, and react to JSONL event streams from AI coding agents (Claude Code, GitHub Copilot CLI, Gemini CLI, Goose, etc.).
 
-**Single compiled Go binary. No dependencies. 3.6MB.**
-
-## Quick start
+## Install
 
 ```bash
-# Clone and build
-git clone https://github.com/kubestellar/pluk.git
-cd pluk
-go build -o pluk ./cmd/pluk/
-
-# Create symlinks for multi-call binary
-ln -sf pluk pluk-publish
-ln -sf pluk pluk-subscribe
-ln -sf pluk pluk-send
-
-# Or use make
-make install
+npm install -g @kubestellar/pluk
 ```
 
-## Usage with a real AI agent
+## Quick Start
+
+One command to create a tmux session, start an AI CLI, attach pluk event capture, and wire up rationguard for real-time excuse detection:
+
+```bash
+pluk attach my-agent --cli=claude --rationguard --rebuttal=send
+```
+
+This does four things:
+1. Creates a tmux session named `my-agent`
+2. Starts `claude` inside it
+3. Attaches pluk via `tmux pipe-pane` to classify all terminal output
+4. Starts `rationguard watch` to detect rationalizations and send rebuttals back
+
+To just attach pluk without rationguard:
+
+```bash
+pluk attach my-agent --cli=claude
+```
+
+To attach to an existing tmux session (e.g., one already running goose):
+
+```bash
+pluk attach my-agent --cli=goose
+```
+
+## See What's Running
+
+```bash
+pluk sessions
+```
+
+```
+SESSION          CLI       STATE     TMUX  LAST ACTIVITY EVENTS
+scanner          claude    working   ●     2s ago        1204
+helper           claude    idle      ●     45s ago       892
+goose-exp        goose     idle      ○     3m ago        156
+```
+
+## Manual Setup
+
+If you prefer to wire things up yourself:
 
 ```bash
 # 1. Start an AI agent in tmux
 tmux new-session -d -s my-agent
 tmux send-keys -t my-agent "claude" Enter
 
-# 2. Attach pluk to capture output (set pattern dir to where you cloned)
-tmux pipe-pane -t my-agent -o \
-  "PLUK_RUN_DIR=/tmp/pluk-run \
-   PLUK_PATTERNS_DIR=/path/to/pluk/config/patterns.d \
-   /path/to/pluk-publish --session my-agent --cli claude"
+# 2. Attach pluk to capture output
+export PLUK_RUN_DIR=/tmp/pluk-run
+tmux pipe-pane -t my-agent -o "pluk watch my-agent --cli=claude"
 
-# 3. Subscribe to events in real-time (another terminal)
-PLUK_RUN_DIR=/tmp/pluk-run ./pluk subscribe my-agent
+# 3. Subscribe to events (another terminal)
+pluk subscribe my-agent --filter=state_change,rate_limit,error
 
-# 4. Subscribe with filter (only classified events, no raw output)
-PLUK_RUN_DIR=/tmp/pluk-run ./pluk subscribe my-agent \
-  --filter "state_change,tool_call_started,tool_call_completed,rate_limit,error"
+# 4. Or start rationguard for real-time detection
+rationguard watch my-agent --rebuttal=send
 
-# 5. Send commands to the agent
-./pluk-send --session my-agent --text "what is 2+2?" --enter
-
-# 6. Watch the agent work in tmux
+# 5. View the agent
 tmux attach -t my-agent
 ```
 
-**Three terminals:**
-- **Terminal 1**: `tmux attach -t my-agent` — watch the agent work
-- **Terminal 2**: `./pluk subscribe my-agent` — see classified events stream
-- **Terminal 3**: `./pluk-send --session my-agent --text "..." --enter` — send commands
+## CLI Commands
 
-## Event types
+| Command | What it does |
+|---------|-------------|
+| `pluk attach <session>` | Create tmux + start CLI + wire pluk (+ rationguard) |
+| `pluk sessions` | List active pluk-monitored sessions |
+| `pluk subscribe <session>` | Tail a pluk JSONL log (like `tail -f`) |
+| `pluk watch <session>` | Classify stdin line-by-line |
+| `pluk send <session> --text="..." --enter` | Send text to a tmux session |
+| `pluk patterns --cli=claude` | Show loaded patterns for a CLI |
 
-| Type | Meaning | Example trigger |
-|------|---------|-----------------|
-| `raw_output` | Every non-empty line of terminal output | Any text |
-| `state_change` | Agent went idle or started working | `❯` prompt, spinner chars |
-| `rate_limit` | Usage limit / quota exhausted | "out of extra usage" |
-| `login_required` | Authentication needed | Login URL in output |
-| `trust_dialog` | Folder trust prompt | "Do you trust the files" |
-| `bypass_permissions` | Permission bypass prompt | "bypass permissions on" |
-| `tool_call_started` | Agent invoked a tool | `● Read`, `● Bash` |
-| `tool_call_completed` | Tool finished | `✓ Read (0.1s)` |
-| `error` | Error in output | "Error:", "panic:" |
-| `model_changed` | Model was switched | Model name in output |
-| `session_ended` | CLI session ended | "Session ended" |
-| `command_received` | Command sent via pluk-send | Bidirectional input |
+### Attach Flags
 
-## Event schema
+| Flag | What it does |
+|------|-------------|
+| `--cli=claude` | CLI type: `claude`, `copilot`, `gemini`, `goose`, `codex`, `aider` |
+| `--rationguard` | Start rationguard watcher alongside pluk |
+| `--rebuttal=send` | Auto-send rebuttals when rationguard detects excuses |
+| `--dangerous` | Skip CLI permission prompts (`--dangerously-skip-permissions` for claude, `--full-auto` for codex, `--non-interactive` for goose) |
+| `--dir=/path` | Working directory for the agent |
+| `--cli-args="..."` | Extra arguments to pass to the CLI |
+| `--no-open` | Don't open a terminal window |
+| `--verbose` | Show debug output |
 
-```json
-{
-  "v": 1,
-  "ts": "2026-06-08T19:57:25.192Z",
-  "seq": 42,
-  "pid": 0,
-  "session": "my-agent",
-  "pane": "0",
-  "source": "pipe-pane",
-  "type": "tool_call_started",
-  "data": {
-    "tool": "Read",
-    "input_preview": "● Read main.go"
-  }
+## Programmatic API
+
+```typescript
+import { Classifier, getPatterns, subscribe, watch, discoverSessions, attach, send } from '@kubestellar/pluk';
+
+// One-command setup: tmux + CLI + pluk + rationguard
+attach({
+  session: 'my-agent',
+  cli: 'claude',
+  rationguard: true,
+  rebuttal: 'send',
+  dangerouslySkipPermissions: true,
+});
+
+// Send text to a tmux session
+send({ session: 'my-agent', text: 'check the build', enter: true });
+
+// Discover running sessions
+const sessions = discoverSessions('/tmp/pluk-run');
+for (const s of sessions) {
+  console.log(`${s.session}: ${s.cli} (${s.state}, ${s.lastActivityAgo})`);
 }
+
+// Classify individual lines
+const patterns = getPatterns('claude');
+const classifier = new Classifier({ session: 'my-agent', patterns });
+const event = classifier.classify('● Read main.go');
+// → { type: 'tool_call_started', data: { tool: 'Read', ... } }
+
+// Subscribe to a JSONL log file (tail -f behavior)
+const sub = subscribe('my-agent', (event) => {
+  console.log(event.type, event.data);
+}, { filter: ['rate_limit', 'error'] });
+
+// Watch stdin for events
+const watcher = watch({
+  session: 'my-agent',
+  cli: 'claude',
+  onEvent(event) {
+    if (event.type === 'rate_limit') {
+      console.warn('Rate limited!', event.data.message);
+    }
+  },
+});
+```
+
+## Event Types
+
+| Type | Meaning |
+|------|---------|
+| `raw_output` | Every non-empty terminal line |
+| `state_change` | Agent went idle or started working |
+| `rate_limit` | Usage limit / quota exhausted |
+| `login_required` | Authentication needed |
+| `trust_dialog` | Folder trust prompt |
+| `bypass_permissions` | Permission bypass prompt |
+| `tool_call_started` | Agent invoked a tool |
+| `tool_call_completed` | Tool finished |
+| `error` | Error in output |
+| `model_changed` | Model was switched |
+| `session_ended` | CLI session ended |
+| `command_received` | Command sent via pluk-send |
+
+## Send Command
+
+Inject text into a running tmux session — used by rationguard to send rebuttals, or by you to send commands:
+
+```bash
+# Send text and press Enter
+pluk send my-agent --text="check the build logs" --enter
+
+# Send literal text (no key interpretation)
+pluk send my-agent --text="hello world" --literal
+
+# Also available as a standalone binary
+pluk-send --session=my-agent --text="test" --enter
 ```
 
 ## Supported CLIs
 
-Pattern files in `config/patterns.d/` define the regex patterns for each CLI:
+Built-in pattern files for: **Claude Code**, **GitHub Copilot CLI**, **Gemini CLI**, **Goose CLI**, **Codex**, **Aider**.
 
-- **Claude Code** (`claude.patterns`) — spinners, tool calls, rate limits, trust dialogs, bypass permissions
-- **GitHub Copilot CLI** (`copilot.patterns`) — environment loaded, idle prompt, rate limits
-- **Gemini CLI** (`gemini.patterns`) — thinking indicators, quota errors
-- **Goose CLI** (`goose.patterns`) — processing indicators, rate limits
+Custom patterns can be loaded from a directory with `--patterns-dir` or `getPatterns(cli, patternsDir)`.
 
-Adding a new CLI is a single pattern file — no code changes needed.
+## Works With
 
-## Architecture
-
-```
-┌──────────────────┐    ┌────────────────┐    ┌────────────────┐
-│  tmux session    │───▶│  pluk publish  │───▶│ session.jsonl  │
-│  (any AI CLI)    │    │  (pipe-pane)   │    │ (append-only)  │
-└──────────────────┘    └────────────────┘    └───────┬────────┘
-                                                      │
-                             ┌────────────────┐       │ tail -f
-                             │ pluk subscribe │◀──────┘
-                             │ (any number)   │
-                             └────────────────┘
-
-┌──────────────────┐    ┌────────────────┐
-│  orchestrator    │───▶│   pluk send    │───▶ tmux send-keys
-│  (watcher, etc.) │    │  (per-session) │
-└──────────────────┘    └────────────────┘
-```
-
-- **Single Go binary** — `pluk publish`, `pluk subscribe`, `pluk send` subcommands
-- **Multi-call binary** — symlinks `pluk-publish`, `pluk-subscribe`, `pluk-send` also work
-- **No broker process** — log-based pub-sub using append-only JSONL files
-- **Multiple subscribers** — any number of processes tailing the same file
-- **Bidirectional** — `pluk send` delivers commands via tmux send-keys
-- **Compiled regex** — pattern matching in Go, no perl dependency
-
-## Docker / Container install
-
-```dockerfile
-# Build pluk from source in a container (requires Go)
-RUN git clone --depth 1 https://github.com/kubestellar/pluk.git /tmp/pluk && \
-    cd /tmp/pluk && go build -o /usr/local/bin/pluk ./cmd/pluk/ && \
-    ln -sf pluk /usr/local/bin/pluk-publish && \
-    ln -sf pluk /usr/local/bin/pluk-subscribe && \
-    ln -sf pluk /usr/local/bin/pluk-send && \
-    mkdir -p /usr/local/etc/pluk/patterns.d && \
-    cp -r /tmp/pluk/config/patterns.d/* /usr/local/etc/pluk/patterns.d/ && \
-    rm -rf /tmp/pluk && \
-    mkdir -p /var/run/pluk/logs /var/run/pluk/commands && \
-    chmod 1777 /var/run/pluk/logs /var/run/pluk/commands
-```
-
-## Environment variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PLUK_RUN_DIR` | `/var/run/pluk` | Runtime directory for logs and commands |
-| `PLUK_PATTERNS_DIR` | `/etc/pluk/patterns.d` | Pattern files directory |
-| `PLUK_CONFIG_DIR` | `/etc/pluk` | Config root directory |
-
-## Building from source
-
-```bash
-git clone https://github.com/kubestellar/pluk.git
-cd pluk
-go build -o pluk ./cmd/pluk/
-
-# Verify
-./pluk version
-# pluk 2.0.0 (go)
-
-# Test event classification
-printf '● Read main.go\n✓ Read main.go (0.3s)\nout of extra usage\n❯ \n' | \
-  PLUK_PATTERNS_DIR=./config/patterns.d \
-  PLUK_RUN_DIR=/tmp/pluk-test \
-  ./pluk publish --session test --cli claude --no-raw
-cat /tmp/pluk-test/logs/test.jsonl
-```
-
-## Performance
-
-- **10,000 lines in 0.15 seconds** (64K lines/sec)
-- **3.6MB** single static binary
-- Zero external dependencies
+- **[@kubestellar/rationguard](https://www.npmjs.com/package/@kubestellar/rationguard)** — real-time rationalization detection and rebuttal
+- **[@kubestellar/promptargs](https://www.npmjs.com/package/@kubestellar/promptargs)** — template variable substitution for AI prompts
+- **[kubestellar/pluk](https://github.com/kubestellar/pluk)** — the Go binary (this package is the TypeScript port)
 
 ## License
 
-Apache 2.0
+Apache-2.0

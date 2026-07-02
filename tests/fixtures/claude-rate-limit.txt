@@ -1,3 +1,0 @@
-● Read src/main.ts
-✓ Read src/main.ts (0.1s)
-You're out of extra usage until 3am UTC. You can still use Claude with your standard monthly allocation.

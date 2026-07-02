@@ -1,3 +1,0 @@
-◐ Reading file src/main.ts
-● Read src/main.ts
-Esc to cancel

@@ -1,7 +1,0 @@
-const errorMessage = "Error: handled gracefully"
-if (error.message.includes("rate limit"))
-const quotaExhausted = false
-● Here is a list item
-✓ All tests passed
-PS1="❯ "
-fmt.Println("panic: test")
