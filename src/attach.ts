@@ -178,6 +178,13 @@ export function attach(opts: AttachOptions): void {
     execSync(sendCmd, { stdio: 'inherit' });
   } else {
     console.log(`Attaching to existing tmux session: ${session}`);
+    if (opts.dangerouslySkipPermissions) {
+      const dangerFlag = resolveDangerousFlag(cli);
+      if (dangerFlag) {
+        console.log(`Warning: --dangerous was set but session already exists. The CLI may not have ${dangerFlag} enabled.`);
+        console.log(`To restart with permissions skipped: tmux send-keys -t ${session} C-c && tmux send-keys -t ${session} "${cliCmd} ${dangerFlag}" Enter`);
+      }
+    }
   }
 
   const plukBin = resolvePlukBin();
