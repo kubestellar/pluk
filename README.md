@@ -36,6 +36,10 @@ To attach to an existing tmux session (e.g., one already running goose):
 pluk attach my-agent --cli=goose
 ```
 
+> **Note:** When attaching to an existing session with `--dangerous`, the CLI may not have permission-skip enabled (the flag only applies when creating a new session). pluk will print a warning with the command to restart the CLI with the right flag.
+
+A new terminal window is always opened for the tmux session (unless `--no-open` is set), so you can interact with the agent directly.
+
 ## See What's Running
 
 ```bash
