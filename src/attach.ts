@@ -218,6 +218,19 @@ export function attach(opts: AttachOptions): void {
       log('skipping terminal window (--no-open)');
     }
 
+    try {
+      const existing = execSync(`pgrep -f "rationguard watch ${session}" 2>/dev/null`, { encoding: 'utf-8' }).trim();
+      if (existing) {
+        const pids = existing.split('\n').filter(p => p && p !== String(process.pid));
+        if (pids.length > 0) {
+          log(`killing ${pids.length} existing rationguard watcher(s) for ${session}: ${pids.join(', ')}`);
+          execSync(`kill ${pids.join(' ')} 2>/dev/null`, { stdio: 'ignore' });
+        }
+      }
+    } catch {
+      // no existing watchers
+    }
+
     const rgBin = resolveRationguardBin();
     log(`rationguard binary: ${rgBin}`);
     const rebuttalFlag = opts.rebuttal ? ` --rebuttal=${opts.rebuttal}` : '';
