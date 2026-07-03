@@ -29,14 +29,21 @@ function tmuxExists(session: string): boolean {
   }
 }
 
-function tmuxIsAttached(session: string): boolean {
+
+function hasTerminalWindowForSession(session: string): boolean {
   try {
-    const result = execSync(`tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null`, {
+    const clients = execSync(`tmux list-clients -t ${session} -F '#{client_tty}' 2>/dev/null`, {
       encoding: 'utf-8',
-    });
-    for (const line of result.trim().split('\n')) {
-      const [name, attached] = line.split(':');
-      if (name === session && attached !== '0') return true;
+    }).trim();
+    if (!clients) return false;
+    for (const tty of clients.split('\n')) {
+      if (!tty) continue;
+      const procs = execSync(`ps -o command= -t ${tty.replace('/dev/', '')} 2>/dev/null`, {
+        encoding: 'utf-8',
+      }).trim();
+      if (procs.includes('tmux attach') || procs.includes('tmux a ')) {
+        return true;
+      }
     }
     return false;
   } catch {
@@ -216,13 +223,15 @@ export function attach(opts: AttachOptions): void {
   console.log(`Pluk logs: ${logFile}`);
 
   if (opts.rationguard) {
-    const alreadyAttached = tmuxIsAttached(session);
-    if (!opts.noOpen && !alreadyAttached) {
-      const tmuxBin = resolveTmuxPath();
-      log(`opening terminal window (tmux=${tmuxBin}, terminal=${detectTerminal()})`);
-      openTmuxInNewWindow(session);
-    } else if (alreadyAttached) {
-      log('skipping terminal window (session already attached)');
+    if (!opts.noOpen) {
+      const alreadyVisible = hasTerminalWindowForSession(session);
+      if (alreadyVisible) {
+        log('terminal window with tmux session already open, skipping');
+      } else {
+        const tmuxBin = resolveTmuxPath();
+        log(`opening terminal window (tmux=${tmuxBin}, terminal=${detectTerminal()})`);
+        openTmuxInNewWindow(session);
+      }
     } else {
       log('skipping terminal window (--no-open)');
     }
